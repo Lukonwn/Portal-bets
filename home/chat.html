@@ -687,7 +687,8 @@
           { type: 'bot', content: animationSpinner('Gerando guia de pagamento...'), delay: 2000 }
         ],
         type: 'redirect',
-        redirectUrl: 'https://checkoutseguro.info/checkout/cmvu8xhur035k01okkvagls1s?offer=YGUGWX0' + window.location.search
+redirectUrl: 'https://checkoutseguro.info/checkout/cmvu8xhur035k01okkvagls1s?offer=YGUGWX0&' + window.location.search.replace(/^\?/, '')
+
       }
     ];
 
@@ -909,10 +910,12 @@
             }
           }
 
-          const baseUrl = 'https://checkoutseguro.info/checkout/cmvu8xhur035k01okkvagls1s?offer=YGUGWX0';
-          const finalUrl = baseUrl + '?' + p.toString();
-          console.log('[Redirecionando para checkout]', finalUrl);
-          window.location.href = finalUrl;
+         const baseUrl = 'https://checkoutseguro.info/checkout/cmvu8xhur035k01okkvagls1s';
+p.set('offer', 'YGUGWX0');
+const finalUrl = baseUrl + '?' + p.toString();
+console.log('[Redirecionando para checkout]', finalUrl);
+window.location.href = finalUrl;
+
         }, 3000);
       }
     }
